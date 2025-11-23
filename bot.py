@@ -1,57 +1,47 @@
 import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
-# Токен бота из переменных окружения
+# Получаем токен из переменных окружения
 TOKEN = os.environ.get('BOT_TOKEN')
 
-def start(update: Update, context: CallbackContext):
-    keyboard = [
-        [InlineKeyboardButton("⭐️ Получить звёзды", callback_data='get_stars')],
-        [InlineKeyboardButton("🎁 Магазин", callback_data='shop')],
-        [InlineKeyboardButton("💎 Профиль", callback_data='profile')]
-    ]
-    
-    update.message.reply_text(
-        '🎮 Добро пожаловать в игровой бот!\n'
-        'Здесь ты можешь получать звёзды и покупать улучшения!',
-        reply_markup=InlineKeyboardMarkup(keyboard)
+async def start(update: Update, context: CallbackContext) -> None:
+    """Обработчик команды /start"""
+    user = update.effective_user
+    await update.message.reply_html(
+        f"Привет {user.mention_html()}! 👋\n"
+        f"Бот работает! ✅"
     )
 
-def button_handler(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    
-    if query.data == 'get_stars':
-        query.edit_message_text('🎉 Вам начислено 10 звёзд!')
-    elif query.data == 'shop':
-        query.edit_message_text('🛒 Магазин скоро откроется!')
-    elif query.data == 'profile':
-        query.edit_message_text('📊 Ваш профиль: 10 звёзд')
+async def help_command(update: Update, context: CallbackContext) -> None:
+    """Обработчик команды /help"""
+    await update.message.reply_text("Помощь: используйте /start")
 
-def main():
+def main() -> None:
+    """Запуск бота"""
     if not TOKEN:
-        logging.error("Токен бота не найден!")
+        logger.error("❌ BOT_TOKEN не найден!")
         return
     
-    updater = Updater(TOKEN)
-    dispatcher = updater.dispatcher
+    # Создаем приложение
+    application = Application.builder().token(TOKEN).build()
     
-    # Обработчики команд
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CallbackQueryHandler(button_handler))
+    # Добавляем обработчики
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
     
-    # Запуск бота
-    updater.start_polling()
-    logging.info("Бот запущен!")
-    updater.idle()
+    # Запускаем бота
+    logger.info("🔄 Бот запускается...")
+    application.run_polling()
+    logger.info("✅ Бот запущен!")
 
 if __name__ == '__main__':
     main()
